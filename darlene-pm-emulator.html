@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synergy Assistant 2000 - Project Manager Emulator</title>
+<style>
+  :root{
+    --desk:#3a6ea5; --face:#d4d0c8; --hi:#ffffff; --sh:#808080; --dk:#404040;
+    --navy:#0a246a; --sky:#a6caf0; --ink:#000; --feud:#000080; --gold:#ffd700;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--desk);font:12px/1.4 Tahoma,Verdana,"Segoe UI",Arial,sans-serif;color:var(--ink);min-height:100vh;padding-bottom:40px}
+  button,input{font:inherit;color:inherit}
+  .desktop{padding:18px 10px 20px;display:flex;justify-content:center}
+  .raised{border:2px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);box-shadow:inset 1px 1px var(--face),inset -1px -1px var(--sh);background:var(--face)}
+  .sunken{border:2px solid;border-color:var(--sh) var(--hi) var(--hi) var(--sh);box-shadow:inset 1px 1px var(--dk);background:#fff}
+  .win{width:min(1020px,100%)}
+  .win.raised{box-shadow:inset 1px 1px var(--face),inset -1px -1px var(--sh),4px 4px 0 rgba(0,0,0,.35)}
+  .title{background:linear-gradient(90deg,var(--navy),var(--sky));color:#fff;font-weight:bold;font-size:13px;padding:3px 4px;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px}
+  .title .t{display:flex;align-items:center;gap:6px;min-width:0}
+  .title .t span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ico{width:14px;height:14px;background:#ffd700;border:1px solid #000;flex:none;position:relative}
+  .ico::after{content:"";position:absolute;left:2px;top:2px;width:8px;height:3px;background:#c00}
+  .tbtns{display:flex;gap:2px;flex:none}
+  .tbtns i{display:block;width:16px;height:14px;background:var(--face);border:1px solid;border-color:#fff #404040 #404040 #fff;position:relative}
+  .tbtns i::after{content:"";position:absolute;left:3px;bottom:2px;width:7px;height:2px;background:#000}
+  .tbtns i:nth-child(2)::after{height:6px;border:1px solid #000;background:none;left:3px;bottom:3px}
+  .tbtns i:nth-child(3)::after{content:"x";background:none;left:4px;bottom:-3px;font-weight:bold;width:auto;height:auto;font-size:11px}
+  .toolbar{display:flex;gap:4px;padding:3px 6px;border-bottom:1px solid var(--sh);flex-wrap:wrap;align-items:center}
+  .btn{background:var(--face);border:2px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);box-shadow:inset 1px 1px var(--face),inset -1px -1px var(--sh);padding:3px 12px;cursor:pointer;min-height:24px}
+  .btn:active{border-color:var(--dk) var(--hi) var(--hi) var(--dk);box-shadow:inset 1px 1px var(--sh);padding:4px 11px 2px 13px}
+  .btn:focus-visible,.slot:focus-visible,.word:focus-visible,.tab:focus-visible,input:focus-visible,.chip:focus-visible{outline:1px dotted #000;outline-offset:-4px}
+  .btn[disabled]{color:var(--sh);text-shadow:1px 1px #fff;cursor:default}
+  .voicebar{display:flex;gap:10px;padding:4px 6px;border-bottom:1px solid var(--sh);flex-wrap:wrap;align-items:center}
+  .voicebar label{display:flex;align-items:center;gap:4px}
+  .voicebar select{max-width:220px;font:inherit}
+  .voicebar input[type=range]{width:90px}
+  .body{display:grid;grid-template-columns:260px 1fr;gap:8px;padding:8px}
+  fieldset{border:2px groove #fff;margin:0 0 8px;padding:6px 8px 8px}
+  legend{padding:0 4px}
+  .meter{margin:6px 0 8px}
+  .meter .lab{display:flex;justify-content:space-between;gap:6px;margin-bottom:2px}
+  .bar{height:16px;padding:1px}
+  .fill{height:100%;width:0;background:repeating-linear-gradient(90deg,var(--navy) 0 8px,transparent 8px 10px);transition:width .6s}
+  .big{font-weight:bold;font-size:15px}
+  .tiny{font-size:11px;color:#333}
+  .tabs{display:flex;gap:0;margin-bottom:-2px;position:relative;z-index:1;flex-wrap:wrap}
+  .tab{background:var(--face);border:2px solid;border-color:var(--hi) var(--dk) transparent var(--hi);padding:4px 14px;cursor:pointer;margin-right:2px;position:relative;top:2px}
+  .tab[aria-selected="true"]{top:0;padding-bottom:6px;font-weight:bold;box-shadow:inset 1px 1px var(--face)}
+  .panel{border:2px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);padding:8px;background:var(--face);min-height:520px}
+  .panel[hidden]{display:none}
+  .log{height:400px;overflow-y:auto;padding:8px;font-size:13px}
+  .msg{margin:0 0 8px;word-wrap:break-word}
+  .msg .who{font-weight:bold}
+  .msg.her .who{color:#a00000}
+  .msg.me .who{color:var(--navy)}
+  .stage{color:#555;font-style:italic}
+  .typing{color:#555;font-style:italic;margin:0 0 8px}
+  .chips{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
+  .chip{background:var(--face);border:2px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);padding:2px 8px;cursor:pointer;font-size:11px}
+  .chip:active{border-color:var(--dk) var(--hi) var(--hi) var(--dk)}
+  .send{display:flex;gap:6px}
+  .send input{flex:1;padding:4px 6px;min-width:0}
+  .host{background:#ffffe1;border:1px solid #000;padding:6px 8px;margin-bottom:8px;min-height:44px}
+  .host b{color:#a00000}
+  .feudhead{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .question{background:var(--feud);color:#fff;border:2px solid #000;padding:8px 10px;font-weight:bold;font-size:14px;flex:1;min-width:220px}
+  .board{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:#000;padding:8px;border:2px solid #000;margin-bottom:8px}
+  .slot{background:var(--feud);color:var(--gold);border:2px solid;border-color:#6a6aff #00003a #00003a #6a6aff;min-height:42px;display:flex;align-items:center;justify-content:space-between;padding:4px 10px;cursor:pointer;font-weight:bold;font-size:14px;text-align:left}
+  .slot .n{display:inline-flex;width:26px;height:26px;border-radius:50%;background:#000;color:var(--gold);align-items:center;justify-content:center;margin:0 auto}
+  .slot.open .n{display:none}
+  .slot .txt{display:none}
+  .slot.open .txt{display:inline}
+  .slot.open{background:#fff;color:#000;border-color:#999}
+  .slot .pts{display:none;background:var(--feud);color:var(--gold);padding:2px 8px;margin-left:8px}
+  .slot.open .pts{display:inline}
+  .strikes{display:flex;gap:6px;align-items:center}
+  .x{width:26px;height:26px;border:2px solid #000;background:#fff;color:#c00;font-weight:bold;font-size:20px;display:flex;align-items:center;justify-content:center;line-height:1}
+  .x.off{color:#bbb}
+  .score{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+  .score .box{padding:6px;text-align:center}
+  .score .big{display:block}
+  .row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .subhead{font-weight:bold;margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--sh)}
+  .pyrcat{background:var(--feud);color:#fff;border:2px solid #000;padding:8px 10px;font-weight:bold;font-size:14px;margin-bottom:6px}
+  .words{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+  .word{background:var(--face);border:2px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);padding:10px;font-weight:bold;font-size:14px;cursor:pointer;text-align:left}
+  .word.done{background:#9bd69b;text-decoration:line-through}
+  .word.hide{color:transparent;text-shadow:none;background:#9a9a9a;cursor:default;user-select:none}
+  .timer{font-size:22px;font-weight:bold;font-family:"Courier New",monospace}
+  .agenda{padding:10px 12px;font-size:13px;min-height:300px}
+  .agenda h3{margin:0 0 4px;font-size:15px}
+  .agenda .meta{color:#444;margin-bottom:8px}
+  .agenda .it{display:grid;grid-template-columns:96px 1fr;gap:8px;padding:5px 0;border-top:1px dotted #999}
+  .agenda .it .tm{font-weight:bold;font-family:"Courier New",monospace;font-size:12px}
+  .agenda .it em{color:#555}
+  .agenda .foot{margin-top:8px;padding-top:8px;border-top:2px solid #000;font-weight:bold}
+  .status{display:flex;gap:3px;padding:0 3px 3px}
+  .status div{border:1px solid;border-color:var(--sh) var(--hi) var(--hi) var(--sh);padding:2px 6px;flex:1;font-size:11px}
+  .status div:first-child{flex:3}
+  .taskbar{position:fixed;left:0;right:0;bottom:0;height:34px;background:var(--face);border-top:2px solid var(--hi);display:flex;align-items:center;gap:6px;padding:2px 4px;z-index:20}
+  .start{font-weight:bold;padding:2px 12px;display:flex;align-items:center;gap:6px}
+  .flag{width:14px;height:14px;background:conic-gradient(#e33 0 25%,#3a3 0 50%,#36f 0 75%,#fc0 0)}
+  .task{flex:1;max-width:260px;text-align:left;padding:3px 8px;font-weight:bold;border:2px solid;border-color:var(--dk) var(--hi) var(--hi) var(--dk);background:repeating-conic-gradient(#d4d0c8 0 25%,#fff 0 50%) 0 0/2px 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .clock{margin-left:auto;border:1px solid;border-color:var(--sh) var(--hi) var(--hi) var(--sh);padding:3px 10px}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:50;padding:12px}
+  .overlay[hidden]{display:none}
+  .dlg{width:min(380px,100%)}
+  .dlg .dbody{display:flex;gap:14px;padding:16px 14px 8px;align-items:flex-start}
+  .dlg .eico{width:32px;height:32px;border-radius:50%;background:#c00;color:#fff;font-weight:bold;font-size:22px;display:flex;align-items:center;justify-content:center;flex:none;border:2px solid #fff;outline:1px solid #800}
+  .dlg .eico.q{background:#fc0;color:#000;outline-color:#a80}
+  .dlg .dfoot{display:flex;justify-content:center;padding:8px 0 12px}
+  .dlg .btn{min-width:80px}
+  @media (max-width:820px){
+    .body{grid-template-columns:1fr}
+    .board{grid-template-columns:1fr}
+    .score{grid-template-columns:1fr}
+    .words{grid-template-columns:1fr}
+    .log{height:340px}
+  }
+  @media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+</head>
+<body>
+
+<div class="desktop">
+  <div class="win raised" role="application" aria-label="Project manager emulator">
+    <div class="title">
+      <div class="t"><div class="ico"></div><span id="winTitle">Synergy Assistant 2000</span></div>
+      <div class="tbtns" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="btnNew">New chat</button>
+      <button class="btn" id="btnRename">Rename her</button>
+      <span class="tiny">Parody character. Entirely fictional. Any resemblance to a real project manager is a coincidence and a cry for help.</span>
+    </div>
+
+    <div class="voicebar" id="voicebar">
+      <label><input type="checkbox" id="vOn"> Read replies aloud</label>
+      <label>Voice <select id="vSel" class="sunken" aria-label="Voice"><option>Loading voices...</option></select></label>
+      <label>Speed <input type="range" id="vRate" min="0.6" max="1.3" step="0.05" value="0.9"></label>
+      <label>Pitch <input type="range" id="vPitch" min="0.6" max="1.4" step="0.05" value="0.95"></label>
+      <button class="btn" id="vTest" type="button">Test</button>
+      <span class="tiny" id="vNote"></span>
+    </div>
+
+    <div class="body">
+      <aside>
+        <fieldset>
+          <legend>Performance review (live)</legend>
+          <div class="meter">
+            <div class="lab"><span>Technical knowledge</span><b id="mKnowTxt">0%</b></div>
+            <div class="bar sunken"><div class="fill" id="mKnow"></div></div>
+          </div>
+          <div class="meter">
+            <div class="lab"><span>Influence over the boss</span><b id="mInfTxt">62%</b></div>
+            <div class="bar sunken"><div class="fill" id="mInf" style="width:62%"></div></div>
+          </div>
+          <div class="meter">
+            <div class="lab"><span>Confidence she is funny</span><b>100%</b></div>
+            <div class="bar sunken"><div class="fill" style="width:100%"></div></div>
+          </div>
+          <div class="meter">
+            <div class="lab"><span>Actual funny</span><b>3%</b></div>
+            <div class="bar sunken"><div class="fill" style="width:3%"></div></div>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>This week</legend>
+          <div class="lab" style="display:flex;justify-content:space-between"><span>Meetings scheduled</span><span class="big" id="cMeet">3</span></div>
+          <div class="lab" style="display:flex;justify-content:space-between"><span>Games planned</span><span class="big" id="cGames">1</span></div>
+          <div class="lab" style="display:flex;justify-content:space-between"><span>Tickets closed</span><span class="big">0</span></div>
+          <div class="lab" style="display:flex;justify-content:space-between"><span>Value delivered</span><span class="big">Pending</span></div>
+        </fieldset>
+        <fieldset>
+          <legend>Known limitations</legend>
+          <div class="tiny">Cannot explain a hypervisor. Can explain Pyramid, at length. Will schedule a meeting about this limitation.</div>
+        </fieldset>
+      </aside>
+
+      <main>
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" aria-selected="true" data-tab="chat">Chat with her</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="game">Friday game meeting</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="agenda">Agenda generator</button>
+        </div>
+
+        <!-- CHAT -->
+        <section class="panel" id="p-chat" role="tabpanel">
+          <div class="log sunken" id="log" aria-live="polite"></div>
+          <div class="chips" id="chips"></div>
+          <div class="send">
+            <input class="sunken" id="inp" type="text" placeholder="Tell her about your server problem..." autocomplete="off" aria-label="Message">
+            <button class="btn" id="btnSend">Send</button>
+          </div>
+        </section>
+
+        <!-- GAME -->
+        <section class="panel" id="p-game" role="tabpanel" hidden>
+          <div class="host" id="host"><b id="hostName">Darlene</b>: Welcome to the weekly meetin', y'all! Pick a game below. Nobody's allowed to say 'ticket.'</div>
+
+          <div class="feudhead">
+            <div class="question" id="fq">Question</div>
+            <div class="strikes" aria-label="Strikes"><div class="x off" id="x1">X</div><div class="x off" id="x2">X</div><div class="x off" id="x3">X</div></div>
+          </div>
+          <div class="board" id="board"></div>
+          <div class="score">
+            <div class="box sunken">Bank<span class="big" id="bank">0</span></div>
+            <div class="box sunken">Team Sysprog<span class="big" id="t1">0</span></div>
+            <div class="box sunken">Team Virtualization<span class="big" id="t2">0</span></div>
+          </div>
+          <div class="row">
+            <button class="btn" id="bStrike">Wrong answer (X)</button>
+            <button class="btn" id="bAw1">Award bank: Sysprog</button>
+            <button class="btn" id="bAw2">Award bank: Virtualization</button>
+            <button class="btn" id="bNextQ">Next survey</button>
+          </div>
+
+          <div class="subhead">The $25,000 Pyramid (IT edition)</div>
+          <div class="pyrcat" id="pcat">Press 'New category'</div>
+          <div class="words" id="words"></div>
+          <div class="row" style="align-items:center">
+            <span class="timer sunken" style="padding:2px 10px" id="timer">45</span>
+            <button class="btn" id="pStart">Start the clock</button>
+            <button class="btn" id="pNew">New category</button>
+            <span class="tiny" id="pscore">0 / 6 correct</span>
+          </div>
+        </section>
+
+        <!-- AGENDA -->
+        <section class="panel" id="p-agenda" role="tabpanel" hidden>
+          <div class="row">
+            <button class="btn" id="aGen">Generate this week's agenda</button>
+            <button class="btn" id="aCopy">Copy as text</button>
+          </div>
+          <div class="agenda sunken" id="agenda"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="status">
+      <div id="sbar">Ready. Technical content: none detected.</div>
+      <div id="sbar2">Mood: yellow</div>
+    </div>
+  </div>
+</div>
+
+<div class="taskbar">
+  <button class="btn start" id="btnStart"><span class="flag"></span>Start</button>
+  <div class="task" id="taskTitle">Synergy Assistant 2000</div>
+  <div class="clock" id="clock">12:00 PM</div>
+</div>
+
+<div class="overlay" id="ov" hidden>
+  <div class="dlg win raised" role="alertdialog" aria-modal="true" aria-labelledby="dTitle">
+    <div class="title"><div class="t"><span id="dTitle">Error</span></div><div class="tbtns" aria-hidden="true"><i></i></div></div>
+    <div class="dbody"><div class="eico" id="dIco">X</div><div id="dMsg">Message</div></div>
+    <div class="dfoot"><button class="btn" id="dOk">OK</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------- helpers ---------- */
+var NAME = "Darlene";
+var $ = function(id){return document.getElementById(id)};
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function rnd(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function R(words){return new RegExp("\\b("+words+")\\b","i")}
+var used = {};
+function pick(arr,key){
+  var u = used[key] || (used[key]=[]);
+  var pool = [];
+  for(var i=0;i<arr.length;i++){ if(u.indexOf(i)<0) pool.push(i); }
+  if(!pool.length){ u.length=0; for(var j=0;j<arr.length;j++) pool.push(j); }
+  var k = pool[rnd(0,pool.length-1)];
+  u.push(k);
+  return arr[k];
+}
+function fmt(s){ // stage directions in *asterisks*
+  return esc(s).replace(/\{N\}/g,esc(NAME)).replace(/\*(.+?)\*/g,'<span class="stage">*$1*</span>');
+}
+
+/* ---------- state ---------- */
+var S = {influence:62, meetings:3, games:1, msgs:[], busy:false};
+
+/* ---------- stage directions (attention wanders; she never looks at who's talking) ---------- */
+var STAGE = [
+  "*eyes drift toward the donut box*",
+  "*looks at the wall clock, then at a different wall clock*",
+  "*nods at something behind you*",
+  "*checks phone, holds it upside down*",
+  "*stares meaningfully at the ceiling tile*",
+  "*waves at somebody who isn't there*",
+  "*types for a while, nothing appears*",
+  "*looks at your left shoulder with great sincerity*",
+  "*squints at the wrong monitor*"
+];
+
+/* ---------- topic engine ---------- */
+var T = [
+ {id:"mainframe", tech:1, dlg:.3, re:R("mainframe|z/os|zos|ibm z|cics|jcl|racf|ispf|sysplex|db2|control-m|control m|sysprog|zvm"),
+  r:[
+  "The mainframe! That's the big one in the back with the blinkin' lights, ain't it? Like a great big picture frame. Who's on frame duty?",
+  "Z-slash-O-S. Zoos! Y'all got animals in there? Lord, that's an HR issue.",
+  "JCL? Sounds like somebody's initials. J.C. L. Is he a new hire? I didn't get an invite.",
+  "Db2? Is that Db one's sequel? The second one's never as good. Put it in lessons learned.",
+  "Control-M? I don't know who 'M' is, but he's gotta report to somebody. Is it me?",
+  "A sysprog? Like a systematic... programmer? So y'all program the system. Well, somebody oughta."]},
+ {id:"vmware", tech:1, dlg:.2, re:R("vmware|vcenter|vsphere|esxi|vxrail|hypervisor|vmotion|drs|hyper-v|virtualization|virtual machines?|vms?|virtual"),
+  r:[
+  "A virtual machine? So it ain't a *real* machine? Then why in the world are we payin' for it? That's a line item I'm gonna flag.",
+  "VMware sounds like a warehouse for vampires. *squints* That ain't right, is it? Anyhoo.",
+  "Hypervisor. Sounds like a supervisor with extra coffee. I'm a supervisor, so I outrank it, I reckon.",
+  "vCenter. Is that where all the V's meet? 'Cause I got a V-neck I been meanin' to bring up.",
+  "ESXi... is that the one with the ex? I don't wanna get in the middle of that.",
+  "VxRail, like a railroad? Y'all got trains in the datacenter? Choo choo! Put it in the weekly.",
+  "VMs are like Barbie's Dreamhouse. Looks real, nobody actually lives there, and everything's pink. Am I right?"]},
+ {id:"winserver", tech:1, dlg:.15, re:R("windows server|windows|win server|server 20\\d\\d|2016|2019|2022|2025|iis|powershell|rdp|wsus"),
+  r:[
+  "Windows Server. So the server has windows? Can we open 'em? I hear it gets hot in there.",
+  "Y'all need to update the Windows. Mine's been remindin' me for three weeks. I click 'remind me tomorrow' and it keeps comin' back like a bad ex.",
+  "Which one are we on, 2022? Sugar, that's practically antique. Is there a 2023? Put me on that.",
+  "PowerShell! Sounds like a fancy nail salon. Y'all offer a manicure with that?",
+  "RDP? I thought that was a kind of cheese. Remote... Dip... Parmesan."]},
+ {id:"reboot", tech:1, dlg:0, re:R("reboot|rebooting|restart|power cycle|turn it off|cold boot"),
+  r:[
+  "Did y'all try turnin' it off and on again? *beams* I learned that from a TV show. It's about all I know, but I know it GOOD.",
+  "Reboot, Reloaded, Revolutions. It's all the same movie, there's three of 'em and they sound alike.",
+  "Rebootin' during business hours? Lord no. Do it when I'm not lookin'. Actually, do it when I *am* lookin', so I can watch."]},
+ {id:"outage", tech:1, dlg:.5, re:R("outage|down|crash|crashed|bsod|blue screen|offline|not working|broke|broken|failed|failure|incident|sev ?1|p1|unreachable|hung|frozen"),
+  r:[
+  "Down?! Well how long's it gon' be down? I got a meetin' in ten minutes and I need the Wi-Fi for my game slides.",
+  "Lord, an outage! Have y'all tried gettin' it back UP? I'll put that on the action items. *writes 'get it up' on a sticky note*",
+  "Okay okay, nobody panic. Let's everybody hop on a call. And let me ask the important question: who changed it? That's what I always ask. *nods wisely*",
+  "An incident! I love a good bridge call. Everybody's there, nobody's talkin', and I get to say 'let's take this offline.'",
+  "Downtime? That's just a nap for the server. We all need one. Let it rest, y'all!"]},
+ {id:"network", tech:1, dlg:0, re:R("dns|dhcp|ip address|ip|subnet|vlan|network|vpn|firewall|port|ping|latency spike|packet"),
+  r:[
+  "DNS... that's Don't Nobody Skedaddle, ain't it? I told y'all when I started, I know my acronyms.",
+  "Network trouble? Maybe it's the Wi-Fi. Have y'all asked it nice?",
+  "An IP address, like where it lives? Can we send it a Christmas card? I'll circulate a signature sheet.",
+  "Firewall! We got one at the lake house. Mostly for marshmallows, but it works.",
+  "Y'all tried pingin' it? That's a fun one. I bet it just says 'pong' and everybody gets a laugh."]},
+ {id:"ad", tech:1, dlg:.3, re:R("active directory|ad|domain controller|group policy|gpo|ldap|kerberos|login|locked out|account locked|password|passwords|mfa"),
+  r:[
+  "Active Directory! That's where all the people's names are, like a phone book. I got a phone book at home, y'all can have it. It's from 2004 but the names don't change much.",
+  "My password is 'Password1!' with the exclamation point. IT said I needed a special character, and I was so excited, I gave it an exclamation point. Don't tell nobody.",
+  "Group Policy? We got a group, and we got a policy. The policy is we play games on Fridays. Y'all been followin' it great.",
+  "A domain controller? So somebody's in control of the domain, and I ain't been told? I'm gonna ask the boss man."]},
+ {id:"patch", tech:1, dlg:.1, re:R("patch|patching|patches|hotfix|kb\\d+|cumulative|windows updates?|updates|upgrade|upgrades|maintenance window"),
+  r:[
+  "Patchin'? Like on a pirate? Arrr. Can we do it durin' business hours? The boss man likes it done 'when nobody's lookin', but also while I'm lookin'.'",
+  "Every time y'all patch somethin', somethin' breaks. Have y'all considered... not patchin'? That's a cost savin's right there. You're welcome!",
+  "Patch Tuesday! I love a theme day. Next week let's do Taco Tuesday and Patch Tuesday together. Synergy!",
+  "An upgrade? Do we get first class? I'd like a window seat. And a blanket."]},
+ {id:"snapshot", tech:1, dlg:0, re:R("snapshot|snapshots|checkpoint|clone|cloning|template"),
+  r:[
+  "A snapshot? Oh I love pictures! Can we put one on the team page? Make sure I'm in the middle.",
+  "Y'all keep snapshots? That's cute. I just take 'em on my phone and never look at 'em again. Same energy.",
+  "A clone? Like Dolly the sheep? Well, bless her heart."]},
+ {id:"backup", tech:1, dlg:.1, re:R("backup|backups|restore|dr|disaster recovery|replication|failover|high availability|redundancy|rto|rpo"),
+  r:[
+  "Backup? Beep beep beep! Hee! I do that when I back out the driveway... Y'all ain't laughin'. Okay.",
+  "Failover. Is that what happens when a pie spills? We need a bigger pie. Add it to the parkin' lot.",
+  "Disaster recovery? Well, y'all do the disasters, and we'll all recover together. I'll send a calendar invite for the recovery. Disasters are walk-ins.",
+  "RTO and RPO. Those sound like Star Wars robots. Do we have the budget for robots?"]},
+ {id:"storage", tech:1, dlg:0, re:R("storage|san|nas|disk|disks|raid|datastore|capacity|space|iops|latency|performance|slow|sluggish|lag"),
+  r:[
+  "Storage? Like Tupperware? I got a whole drawer of lids with no bottoms, and I'm tellin' you, that's where all the capacity went.",
+  "RAID? Like the bug spray? Y'all get roaches in the datacenter? Lord. Call the exterminator.",
+  "Latency! Like a latte? Oh y'all are fancy. I take mine with three sugars and a meetin'.",
+  "It's slow? Have y'all tried makin' it faster? That's what I do with me on Mondays.",
+  "We out of space? I looked at the room, there's plenty of room. I'd say we got room for a ping pong table."]},
+ {id:"cluster", tech:1, dlg:0, re:R("cluster|clusters|node|nodes|host|hosts|vsan|datacenter|data center|rack|cpu|ram|memory|cores?|vcpu|resources?|overcommit"),
+  r:[
+  "A cluster? Like Cheerios! Y'all got 'em in a bowl together... and the cloud is the milk. Is the milk the cloud? Y'all lost me.",
+  "RAM? Like the truck? I drive a Ram! Y'all want more RAM? I'll ask the boss man to buy everybody a truck.",
+  "CPU. See-pee-you. Cutest name for a computer part. Sounds like a baby's name. Cee-Pea-Yooo.",
+  "How many cores we got? I like apple cores best. We should do a snack in the meetin'."]},
+ {id:"ticket", tech:0, dlg:.2, re:R("ticket|tickets|jira|servicenow|snow|request|requests|ticketing|sla|priority|chg|change request|change"),
+  r:[
+  "Tickets? Do we got concert tickets?! Please say Dolly.",
+  "A change request? Y'all need change? I got quarters in my car. Take 'em.",
+  "Priority one? That's the one I do first. I do the games first. Always. Y'all know that.",
+  "How many tickets we closed this week? *eyes drift to the ceiling tile* Zero? Well, that's a nice round number!",
+  "SLA? Is that Spanish for slaw? Is there a lunch I wasn't told about?"]},
+ {id:"status", tech:0, dlg:.3, re:R("status|report|progress|eta|timeline|deadline|due|milestone|schedule|project plan|gantt|blocker|risk"),
+  r:[
+  "Status? I only got three: red, yellow, and green. Everythin' is yellow. Yellow's like green with some doubt. It's what I put on everythin' and nobody's ever asked.",
+  "Deadline? Dead...line? Lord. Who died? Is that an HR thing? I'll loop 'em in.",
+  "ETA? I'll tell the boss man 'soon-ish.' That covers it.",
+  "A project plan? I got a big whiteboard and a lot of sticky notes. I don't know where any of 'em go, but they're real colorful.",
+  "Blockers? Y'all got blockers? Like for the sun? Hon, we're in a basement."]},
+ {id:"meeting", tech:0, dlg:0, re:R("meeting|meetings|agenda|standup|stand-up|calendar|sync|invite|check-in|weekly|one-on-one|1:1"),
+  r:[
+  "Meetin'? Well, y'all know I got a good one Friday. I been cookin' on it since Tuesday. Everybody bring a #2 pencil and a competitive spirit.",
+  "I moved the meetin' to 4:55 Friday, because that's when folks are the most relaxed and honest. Y'all be thankin' me later.",
+  "We need a meetin' to prep for the meetin'. Then a meetin' to debrief the meetin'. Then a game, in the meetin'. That's what I call... *searches* ...synchronicity.",
+  "I put a calendar invite on everybody's calendar. It says 'Mandatory Fun.' It ain't optional, hon, it's right there in the title."]},
+ {id:"games", tech:0, dlg:0, re:R("game|games|feud|pyramid|jeopardy|wheel|match game|newlywed|bingo|trivia|fun|icebreaker|play|contest|prize"),
+  r:[
+  "Y'all know who's good at Pyramid? ME. And that's the part that don't matter, 'cause the game ain't about winnin', it's about *community*. But also I win.",
+  "Next week it's Match Game. Y'all fill in the blank: '{N} is so blank, she blank.' Don't be shy. Be nice. The boss man'll be there.",
+  "I'm workin' on a Family Feud with IT questions. 'Name somethin' you do on a server.' ...Serve it! Like a casserole! Round two!",
+  "Wheel of Fortune! Everybody gets a letter, but I buy the vowels. I'm the only one who knows how.",
+  "The prize this week is a coupon for a free meetin'. You get to pick the time. Within reason. Friday at 4:55."]},
+ {id:"boss", tech:0, dlg:0, re:R("boss|manager|management|leadership|director|promotion|raise|influence|credit|team lead|vp"),
+  r:[
+  "Me and the boss man? We're thick as thieves. He said just yesterday, 'I don't know how we got by before you.' I think he meant it nice.",
+  "I'll talk to the boss man and get back to y'all. I'm 'bout the only one he listens to. Y'all keep workin'. Whatever it is. I ain't gonna ask.",
+  "A promotion? Oh, I'm not allowed to say. But I got a new lanyard.",
+  "A raise? Y'all hear that? Somebody wants a raise! We'll need a meetin' about the meetin' about the budget. I'll bring my game."]},
+ {id:"thanks", tech:0, dlg:0, re:R("thanks|thank you|thx|appreciate"),
+  r:["Aw, y'all are sweet! I put that in my review under 'accomplishments.'",
+     "You're welcome, hon! That's what I'm here for. That, and the donuts.",
+     "Don't mention it. Actually, do. Mention it to the boss man, please, and soon."]},
+ {id:"help", tech:0, dlg:0, re:R("help|help me|what can you do|how do i|who are you|what do you do"),
+  r:["I can do meetin's, games, and put things in the parkin' lot. That's about the whole list, hon. It's a long parkin' lot.",
+     "What do I do? Oh, I *coordinate*. Don't ask what. I coordinate it real good.",
+     "I'm the project manager! I manage the projects, and the managers, and the games. In reverse order of importance."]},
+ {id:"hi", tech:0, dlg:0, re:R("hi|hello|hey|howdy|morning|good morning|sup|yo"),
+  r:["Well hey there, sugar! Y'all ready for Friday's meetin'? I got a real good one. It's Family Feud. Again. Bless!",
+     "Hey hon! *waves at somebody behind you* Sorry, thought I seen Gary. What's goin' on?",
+     "Mornin'! I put a meetin' on your calendar. Don't look at it. It's a surprise. It's the same surprise as last week."]}
+];
+
+var FALL_Q = [
+  "That's a real good question. Let me circle back on that. I always say 'circle back.' It buys me about a week.",
+  "Hmm! I'm gonna take that offline. Offline's where I keep everything.",
+  "Ooh, that's above my pay grade. And below it, honestly. It's pretty much a flat line, that grade.",
+  "Is that a Teams thing, or a Zoom thing? I only know the one with the little faces in boxes.",
+  "I'd have to ask the team. Which, y'all are the team. Okay so what's your answer?",
+  "Say less, hon. Actually say it in a slide. I like a slide with a lot of arrows."
+];
+var FALL_S = [
+  "Mm-hm. Mm-hm. Yep. Now put that in an email so I can forward it with 'Thoughts?' on top.",
+  "I hear ya. I really, really hear ya. Can ya say it again, but with synergy?",
+  "That's real interestin'. I'm gonna make a note. *writes 'note'*",
+  "Well, bless your heart.",
+  "Okay, but have we looped in the right stakeholders? I don't know who they are, but I'd like 'em looped.",
+  "Y'all are speakin' a language I almost know. Keep goin', I'll nod."
+];
+
+var DLG = [
+  ["Synergy Assistant 2000","Technical knowledge could not be found.\n\nWould you like to circle back?"],
+  ["Synergy Assistant 2000","The operation completed with zero value.\n\nPress OK to schedule a meeting about it."],
+  ["Synergy Assistant 2000","Not enough bandwidth.\n\n(Source: Darlene)"],
+  ["Synergy Assistant 2000","Error 0x00000000: Nothing was done, successfully."],
+  ["Synergy Assistant 2000","Please do not look at the project plan.\n\nIt is a lot of sticky notes."],
+  ["Synergy Assistant 2000","Your request has been parked in the parking lot.\n\nEstimated retrieval: never."]
+];
+
+/* ---------- chat ---------- */
+var log = $("log");
+function render(){
+  var h = "";
+  S.msgs.forEach(function(m){
+    if(m.who==="me"){
+      h += '<p class="msg me"><span class="who">You:</span> '+esc(m.t)+'</p>';
+    } else {
+      h += '<p class="msg her"><span class="who">'+esc(NAME)+':</span> '+fmt(m.t)+'</p>';
+    }
+  });
+  if(S.busy) h += '<p class="typing">'+esc(NAME)+' is typing... and looking at something else...</p>';
+  log.innerHTML = h;
+  log.scrollTop = log.scrollHeight;
+}
+function meters(flickKnow){
+  $("mInf").style.width = S.influence+"%";
+  $("mInfTxt").textContent = S.influence+"%";
+  $("cMeet").textContent = S.meetings;
+  $("cGames").textContent = S.games;
+  if(flickKnow){
+    $("mKnow").style.width="2%"; $("mKnowTxt").textContent="1%";
+    $("sbar").textContent = "Technical content detected. Dismissing...";
+    setTimeout(function(){
+      $("mKnow").style.width="0%"; $("mKnowTxt").textContent="0%";
+      $("sbar").textContent = "Ready. Technical content: none detected.";
+    },1100);
+  }
+}
+function reply(text){
+  var topic = null;
+  for(var i=0;i<T.length;i++){ if(T[i].re.test(text)){ topic=T[i]; break; } }
+  var out;
+  if(topic){ out = pick(topic.r, topic.id); }
+  else { out = pick(/\?\s*$/.test(text) ? FALL_Q : FALL_S, "fb"); }
+  if(out.indexOf("*")<0 && Math.random()<.45){ out += " " + pick(STAGE,"stage"); }
+  S.influence = Math.min(99, S.influence + rnd(1,3));
+  if(topic && (topic.id==="meeting"||topic.id==="games")){ S.meetings += rnd(1,2); }
+  if(topic && topic.id==="games"){ S.games += 1; }
+  if(topic && topic.id==="status"){ $("sbar2").textContent = "Mood: still yellow"; }
+  return {text:out, topic:topic};
+}
+function send(text){
+  text = (text||"").trim();
+  if(!text || S.busy) return;
+  S.msgs.push({who:"me",t:text});
+  $("inp").value = "";
+  S.busy = true; render();
+  var r = reply(text);
+  setTimeout(function(){
+    S.busy = false;
+    S.msgs.push({who:"her",t:r.text});
+    speak(r.text);
+    meters(r.topic && r.topic.tech);
+    render();
+    if(r.topic && r.topic.dlg && Math.random() < r.topic.dlg){
+      setTimeout(function(){ var d = pick(DLG,"dlg"); dialog(d[0], d[1], "err"); }, 500);
+    }
+  }, 650 + rnd(0,800));
+}
+function resetChat(){
+  S.msgs = []; S.busy = false; used = {};
+  S.msgs.push({who:"her",t:"Well hey there, sugar! I'm {N}, your project manager. I don't know what any of this is, but I'm real excited. What's goin' on? " + pick(STAGE,"stage")});
+  render(); meters(false);
+}
+var CHIPS = ["The cluster is down","Patch window Saturday","Status update?","Take a snapshot","Mainframe batch failed","Our VMware renewal","Friday meeting","Can I get a raise?","Reset my password"];
+$("chips").innerHTML = CHIPS.map(function(c){return '<button class="chip" type="button">'+esc(c)+'</button>'}).join("");
+$("chips").addEventListener("click",function(e){ if(e.target.classList.contains("chip")) send(e.target.textContent); });
+$("btnSend").addEventListener("click",function(){ send($("inp").value); });
+$("inp").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); send($("inp").value); } });
+$("btnNew").addEventListener("click",resetChat);
+$("btnRename").addEventListener("click",function(){
+  var n = window.prompt("What should her name be?", NAME);
+  if(n && n.trim()){ NAME = n.trim().slice(0,24); applyName(); render(); renderAgenda(); }
+});
+function applyName(){
+  $("winTitle").textContent = "Synergy Assistant 2000 - " + NAME;
+  $("taskTitle").textContent = "Synergy Assistant 2000 - " + NAME;
+  $("hostName").textContent = NAME;
+  document.title = "Synergy Assistant 2000 - " + NAME;
+}
+
+/* ---------- dialog ---------- */
+var lastFocus = null;
+function dialog(title,msg,kind){
+  lastFocus = document.activeElement;
+  $("dTitle").textContent = title;
+  $("dMsg").innerHTML = esc(msg).replace(/\n/g,"<br>");
+  var ico = $("dIco"); ico.textContent = kind==="q" ? "?" : "X"; ico.className = "eico" + (kind==="q" ? " q" : "");
+  $("ov").hidden = false; $("dOk").focus();
+}
+function closeDialog(){ $("ov").hidden = true; if(lastFocus && lastFocus.focus) lastFocus.focus(); }
+$("dOk").addEventListener("click",closeDialog);
+document.addEventListener("keydown",function(e){ if(e.key==="Escape" && !$("ov").hidden) closeDialog(); });
+$("btnStart").addEventListener("click",function(){
+  dialog("Start","You have been scheduled for a meeting.\n\nThe meeting is about the meeting.","q");
+});
+
+/* ---------- tabs ---------- */
+var tabs = document.querySelectorAll(".tab");
+Array.prototype.forEach.call(tabs,function(t){
+  t.addEventListener("click",function(){
+    Array.prototype.forEach.call(tabs,function(x){ x.setAttribute("aria-selected", x===t ? "true":"false"); });
+    ["chat","game","agenda"].forEach(function(k){ $("p-"+k).hidden = (k!==t.getAttribute("data-tab")); });
+  });
+});
+
+/* ---------- Family Feud ---------- */
+var FEUD = [
+ {q:"Name something you hear when a server goes down.", a:[["Is it plugged in?",34],["Did you reboot it?",27],["It's DNS",18],["Who changed something?",14],["Nothing changed",7]]},
+ {q:"Name a reason the weekly status meeting could have been an email.", a:[["Nothing changed since Monday",31],["Nobody prepared",24],["Everyone's on mute",19],["The game ran long",16],["Nobody asked for it",10]]},
+ {q:"Name something an admin does at 2 a.m.", a:[["Patching",36],["Rebooting",25],["Crying",16],["Checking Slack",14],["Regretting career choices",9]]},
+ {q:"Name a word project managers say that means nothing.", a:[["Synergy",33],["Circle back",28],["Bandwidth",18],["Leverage",13],["Low-hanging fruit",8]]},
+ {q:"Name something you'd rather do than play Pyramid at 9 a.m. Monday.", a:[["Patch Exchange",30],["Go to the dentist",26],["Jury duty",20],["Rebuild a domain controller",15],["Defrag a floppy",9]]},
+ {q:"Name a reason a VM runs slow.", a:[["Overprovisioned",33],["Noisy neighbor",25],["Disk latency",20],["Forgotten snapshot",13],["Somebody's mining crypto",9]]}
+];
+var HQ = {
+  reveal:["Survey says! *looks at the wrong monitor*","Ding! Y'all are on fire. Like the server room that one time.","That's a good one! I don't know why, but the card flipped.","Ooh! And that's a number! I love numbers.","Look at y'all, so smart! That surprised me."],
+  strike:["Uh-oh, that's a big ol' X, hon.","Ehh-NNT. Nope!","Bless your heart. No.","Oh, that's a swing and a miss, sugar."],
+  award:["Points to the winnin' team! Everybody clap, even if you didn't win. Especially then.","That's what we call a win-win! Except for the one that lost.","Put it on the board! Somebody write it on a sticky note."],
+  next:["Next survey! Nobody touch your keyboards. That's cheatin'.","A new question! Same rules. Don't say 'ticket.'","Okay okay, round two. And try to have fun this time. That's an order."],
+  three:["Three strikes! Y'all are out. Steal time! Does anybody know how to steal? I do not."],
+  allopen:["Y'all got the whole board! Somebody's been readin' the manual. We don't have a manual. Weird."]
+};
+var F = {i:-1, open:[], strikes:0, bank:0, t1:0, t2:0};
+function say(arr){ sayRaw(pick(arr,"hq"+arr.length+arr[0].length)); }
+function sayRaw(s){ $("host").innerHTML = '<b>'+esc(NAME)+'</b>: '+fmt(s); speak(s); }
+function renderFeud(){
+  var q = FEUD[F.i];
+  $("fq").textContent = q.q;
+  var h = "";
+  q.a.forEach(function(a,k){
+    var o = F.open.indexOf(k)>=0;
+    h += '<button type="button" class="slot'+(o?' open':'')+'" data-k="'+k+'" aria-label="Answer '+(k+1)+(o?': '+esc(a[0])+', '+a[1]+' points':', hidden')+'">'
+       + '<span class="n">'+(k+1)+'</span><span class="txt">'+esc(a[0])+'</span><span class="pts">'+a[1]+'</span></button>';
+  });
+  $("board").innerHTML = h;
+  for(var s=1;s<=3;s++){ $("x"+s).className = "x" + (F.strikes>=s ? "" : " off"); }
+  $("bank").textContent = F.bank; $("t1").textContent = F.t1; $("t2").textContent = F.t2;
+}
+function nextFeud(){
+  F.i = (F.i+1) % FEUD.length; F.open = []; F.strikes = 0; F.bank = 0; renderFeud();
+}
+$("board").addEventListener("click",function(e){
+  var b = e.target.closest(".slot"); if(!b) return;
+  var k = +b.getAttribute("data-k");
+  if(F.open.indexOf(k)>=0) return;
+  F.open.push(k); F.bank += FEUD[F.i].a[k][1]; renderFeud();
+  if(F.open.length === FEUD[F.i].a.length) say(HQ.allopen); else say(HQ.reveal);
+});
+$("bStrike").addEventListener("click",function(){
+  if(F.strikes<3){ F.strikes++; renderFeud(); if(F.strikes===3) say(HQ.three); else say(HQ.strike); }
+});
+$("bAw1").addEventListener("click",function(){ F.t1 += F.bank; F.bank = 0; renderFeud(); say(HQ.award); });
+$("bAw2").addEventListener("click",function(){ F.t2 += F.bank; F.bank = 0; renderFeud(); say(HQ.award); });
+$("bNextQ").addEventListener("click",function(){ nextFeud(); say(HQ.next); });
+
+/* ---------- Pyramid ---------- */
+var PYR = [
+ {c:"Things in a datacenter", w:["Server","Rack","Cable","Cooling","Badge reader","Cold aisle"]},
+ {c:"Things you say to a server", w:["Please","Come back","Don't do this","Why now","I'm begging you","Not on Friday"]},
+ {c:"Things that go down on Friday at 4:55", w:["Domain controller","VPN","Print server","Morale","The cluster","Your weekend"]},
+ {c:"Things in a Windows Server", w:["Event log","Registry","Service","Role","Updates","Reboot"]},
+ {c:"Things {N} thinks are servers", w:["Waitress","Tennis ace","Volleyball","Coffee pot","Pie knife","Security guard"]},
+ {c:"Things on a mainframe", w:["Batch job","JCL","Dataset","Console","Sysplex","Green screen"]}
+];
+var HP = {
+  start:["Forty-five seconds on the clock! Describe it without sayin' it. That's called a Pyramid, hon. Go go go!","Okay, partner, I'll hold the clock. I don't know how it works, but I'm holdin' it real tight."],
+  ok:["Yes! That's one!","Ding ding! Y'all are geniuses!","Got it! Don't stop now!"],
+  time:["Time! Y'all were so close. Not really, but I'm a positive person.","And that's time! Great effort, y'all. Put it in the retrospective."],
+  all:["Y'all got 'em ALL?! Lord have mercy. Somebody's been studyin'."]
+};
+var P = {c:-1, done:[], run:false, left:45, iv:null};
+function stopP(){ if(P.iv){ clearInterval(P.iv); P.iv = null; } P.run = false; }
+function renderP(){
+  var c = PYR[P.c];
+  $("pcat").textContent = c ? c.c.replace("{N}",NAME) : "Press 'New category'";
+  var h = "";
+  if(c){
+    c.w.forEach(function(w,k){
+      var done = P.done.indexOf(k)>=0;
+      var cls = "word" + (done?" done":"") + ((!P.run && !done)?" hide":"");
+      h += '<button type="button" class="'+cls+'" data-k="'+k+'"'+((!P.run && !done)?' disabled':'')+'>'+esc(w)+'</button>';
+    });
+  }
+  $("words").innerHTML = h;
+  $("timer").textContent = P.left;
+  $("pscore").textContent = P.done.length + " / " + (c?c.w.length:6) + " correct";
+}
+function newP(){
+  stopP(); P.c = (P.c+1) % PYR.length; P.done = []; P.left = 45; renderP();
+}
+$("pNew").addEventListener("click",function(){ newP(); sayRaw("Fresh category! Hit start when your partner's ready. I'll be lookin' at the clock. Or the wall. Somewhere."); });
+$("pStart").addEventListener("click",function(){
+  if(P.c<0) newP();
+  if(P.run) return;
+  if(P.left<=0){ P.left = 45; P.done = []; }
+  P.run = true; renderP(); say(HP.start);
+  P.iv = setInterval(function(){
+    P.left--; $("timer").textContent = P.left;
+    if(P.left<=0){ stopP(); renderP(); say(HP.time); }
+  },1000);
+});
+$("words").addEventListener("click",function(e){
+  var b = e.target.closest(".word"); if(!b || !P.run) return;
+  var k = +b.getAttribute("data-k");
+  if(P.done.indexOf(k)<0){
+    P.done.push(k);
+    if(P.done.length === PYR[P.c].w.length){ stopP(); renderP(); say(HP.all); }
+    else { renderP(); say(HP.ok); }
+  }
+});
+
+/* ---------- Agenda generator ---------- */
+var GAMES = [
+ ["Family Feud","Survey of 100 admins: name something that breaks right after someone says 'it's been stable.'"],
+ ["$25,000 Pyramid","Describe 'high availability' without saying 'up', 'time', or 'high.'"],
+ ["Match Game","'The server is so slow that ______.' Fill in the blank. Be nice."],
+ ["The Newlywed Game","Teammates guess each other's most-used command. Divorces are not tracked."],
+ ["Wheel of Fortune","Solve the phrase: C_RC_E B_CK. Vowels cost extra."],
+ ["Press Your Luck","Spin for a change window. No whammies, except the CAB."],
+ ["Name That Tune","Name that hold music in three notes. Everyone fails."],
+ ["Hollywood Squares","Bluff whether the answer about DNS is true or false. (It's DNS.)"],
+ ["Password","Give one-word clues. Not 'Password1!'"],
+ ["Jeopardy!","Categories: Reboots, Blame, Acronyms, Things That Were Fine Yesterday, Potpourri."],
+ ["The Price Is Right","Guess the license renewal price without going over. Nobody ever has."],
+ ["Let's Make a Deal","Trade your open ticket for what's behind Door #3. It's another ticket."],
+ ["Pictionary","Draw 'cluster failover.' You have a marker and no dignity."],
+ ["Concentration","Match each outage with its root cause. Hint: it's DNS."],
+ ["Bingo","Free space: 'Let's take this offline.'"]
+];
+var A = null;
+function genAgenda(){
+  var g = pick(GAMES,"games");
+  var d = new Date(); var day = (5 - d.getDay() + 7) % 7; var f = new Date(d.getTime() + day*86400000);
+  var when = f.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  A = {
+    title: "Weekly Team Meeting (Mandatory Fun)",
+    when: when + ", 4:55 PM",
+    items: [
+      ["0:00 - 0:05","Welcome and icebreaker","'I got a joke for y'all.' A moment of silence."],
+      ["0:05 - 0:35",g[0],g[1]],
+      ["0:35 - 0:40","Status review","Everything is yellow."],
+      ["0:40 - 0:45","Parking lot","Items parked: all of them."],
+      ["0:45 - 0:50","Action items","Circle back. Owner: Team. Due: soon-ish."],
+      ["0:50 - 0:55","Vote on next week's game","Winner decided in advance."],
+      ["0:55 - 1:00","Wrap-up","No time left for technical topics (0 scheduled)."]
+    ],
+    foot: "Game time: 30 min. Technical content: 0 min. Value delivered: pending."
+  };
+  renderAgenda();
+}
+function renderAgenda(){
+  if(!A){ $("agenda").innerHTML = '<span class="tiny">Press the button. It writes the agenda. It does not write anything about the work.</span>'; return; }
+  var h = '<h3>'+esc(A.title)+'</h3><div class="meta">Host: '+esc(NAME)+' &nbsp;|&nbsp; '+esc(A.when)+'</div>';
+  A.items.forEach(function(it){
+    h += '<div class="it"><div class="tm">'+esc(it[0])+'</div><div><b>'+esc(it[1])+'</b><br><em>'+esc(it[2])+'</em></div></div>';
+  });
+  h += '<div class="foot">'+esc(A.foot)+'</div>';
+  $("agenda").innerHTML = h;
+}
+$("aGen").addEventListener("click",function(){ genAgenda(); S.meetings++; S.games++; meters(false); });
+$("aCopy").addEventListener("click",function(){
+  if(!A){ genAgenda(); }
+  var t = A.title+"\nHost: "+NAME+"\n"+A.when+"\n\n";
+  A.items.forEach(function(it){ t += it[0]+"  "+it[1]+" - "+it[2]+"\n"; });
+  t += "\n"+A.foot+"\n";
+  var done = function(){ $("sbar").textContent = "Agenda copied. Nobody will read it."; setTimeout(function(){ $("sbar").textContent="Ready. Technical content: none detected."; },2000); };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,function(){ fallbackCopy(t); done(); }); }
+  else { fallbackCopy(t); done(); }
+});
+function fallbackCopy(t){
+  var ta = document.createElement("textarea"); ta.value = t; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); }catch(e){} document.body.removeChild(ta);
+}
+
+/* ---------- clock ---------- */
+function tick(){
+  var d = new Date(); var h = d.getHours(), m = d.getMinutes();
+  var ap = h>=12 ? "PM":"AM"; h = h%12 || 12;
+  $("clock").textContent = h+":"+(m<10?"0":"")+m+" "+ap;
+}
+tick(); setInterval(tick,15000);
+
+/* ---------- voice (browser text-to-speech) ---------- */
+var synth = window.speechSynthesis || null;
+var voices = [];
+function loadVoices(){
+  if(!synth) return;
+  voices = synth.getVoices().filter(function(v){ return /^en/i.test(v.lang); });
+  var sel = $("vSel"), prev = sel.value;
+  if(!voices.length){ sel.innerHTML = "<option>No English voices found</option>"; return; }
+  var pref = /(female|zira|jenny|aria|samantha|karen|susan|libby|sonia|serena|catherine|natural)/i;
+  var best = 0;
+  for(var i=0;i<voices.length;i++){ if(pref.test(voices[i].name)){ best = i; break; } }
+  sel.innerHTML = voices.map(function(v,i){ return '<option value="'+i+'">'+esc(v.name)+' ('+esc(v.lang)+')</option>'; }).join("");
+  sel.value = (prev && voices[+prev]) ? prev : String(best);
+}
+function cleanForSpeech(t){
+  return t.replace(/\{N\}/g,NAME).replace(/\*[^*]*\*/g,"").replace(/\s+/g," ").trim();
+}
+function speak(text){
+  if(!synth || !$("vOn").checked) return;
+  var clean = cleanForSpeech(text); if(!clean) return;
+  synth.cancel();
+  var u = new SpeechSynthesisUtterance(clean);
+  var v = voices[+$("vSel").value]; if(v){ u.voice = v; u.lang = v.lang; }
+  u.rate = +$("vRate").value; u.pitch = +$("vPitch").value;
+  synth.speak(u);
+}
+if(!synth){
+  $("vOn").disabled = true; $("vTest").disabled = true; $("vSel").disabled = true;
+  $("vNote").textContent = "This browser has no speech support.";
+} else {
+  loadVoices();
+  if(synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices;
+  $("vTest").addEventListener("click",function(){
+    var was = $("vOn").checked; $("vOn").checked = true;
+    speak("Well hey there, sugar! Y'all ready for Friday's meetin'?");
+    $("vOn").checked = was;
+  });
+  $("vOn").addEventListener("change",function(){ if(!this.checked) synth.cancel(); });
+  $("btnNew").addEventListener("click",function(){ synth.cancel(); });
+}
+
+/* ---------- init ---------- */
+applyName();
+resetChat();
+nextFeud();
+newP(); P.c = -1; renderP();
+renderAgenda();
+})();
+</script>
+</body>
+</html>
